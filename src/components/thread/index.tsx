@@ -12,7 +12,7 @@ import {
   DO_NOT_RENDER_ID_PREFIX,
   ensureToolCallsHaveResponses,
 } from "@/lib/ensure-tool-responses";
-import { LangGraphLogoSVG } from "../icons/langgraph";
+import { CelHiveLogoSVG } from "../icons/celhive";
 import { TooltipIconButton } from "./tooltip-icon-button";
 import {
   ArrowDown,
@@ -30,13 +30,13 @@ import { toast } from "sonner";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { Label } from "../ui/label";
 import { Switch } from "../ui/switch";
-import { GitHubSVG } from "../icons/github";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "../ui/tooltip";
+// import { GitHubSVG } from "../icons/github";
+// import {
+//   Tooltip,
+//   TooltipContent,
+//   TooltipProvider,
+//   TooltipTrigger,
+// } from "../ui/tooltip";
 import { useFileUpload } from "@/hooks/use-file-upload";
 import { ContentBlocksPreview } from "./ContentBlocksPreview";
 import {
@@ -45,6 +45,8 @@ import {
   ArtifactTitle,
   useArtifactContext,
 } from "./artifact";
+import { UserProfile } from "@/components/auth/UserProfile";
+import { withDefaultAgentsConfig } from "@/lib/default-agents-config";
 
 function StickyToBottomContent(props: {
   content: ReactNode;
@@ -87,29 +89,6 @@ function ScrollToBottom(props: { className?: string }) {
   );
 }
 
-function OpenGitHubRepo() {
-  return (
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <a
-            href="https://github.com/langchain-ai/agent-chat-ui"
-            target="_blank"
-            className="flex items-center justify-center"
-          >
-            <GitHubSVG
-              width="24"
-              height="24"
-            />
-          </a>
-        </TooltipTrigger>
-        <TooltipContent side="left">
-          <p>Open GitHub repo</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
 
 export function Thread() {
   const [artifactContext, setArtifactContext] = useArtifactContext();
@@ -216,11 +195,11 @@ export function Thread() {
 
     stream.submit(
       { messages: [...toolMessages, newHumanMessage], context },
-      {
+      withDefaultAgentsConfig({
         streamMode: ["values"],
         streamSubgraphs: true,
         streamResumable: true,
-        optimisticValues: (prev) => ({
+        optimisticValues: (prev: any) => ({
           ...prev,
           context,
           messages: [
@@ -229,7 +208,7 @@ export function Thread() {
             newHumanMessage,
           ],
         }),
-      },
+      }),
     );
 
     setInput("");
@@ -242,12 +221,12 @@ export function Thread() {
     // Do this so the loading state is correct
     prevMessageLength.current = prevMessageLength.current - 1;
     setFirstTokenReceived(false);
-    stream.submit(undefined, {
+    stream.submit(undefined, withDefaultAgentsConfig({
       checkpoint: parentCheckpoint,
       streamMode: ["values"],
       streamSubgraphs: true,
       streamResumable: true,
-    });
+    }));
   };
 
   const chatStarted = !!threadId || !!messages.length;
@@ -326,7 +305,6 @@ export function Thread() {
                 )}
               </div>
               <div className="absolute top-2 right-4 flex items-center">
-                <OpenGitHubRepo />
               </div>
             </div>
           )}
@@ -360,19 +338,15 @@ export function Thread() {
                     damping: 30,
                   }}
                 >
-                  <LangGraphLogoSVG
-                    width={32}
-                    height={32}
+                  <CelHiveLogoSVG
+                    width={100}
                   />
-                  <span className="text-xl font-semibold tracking-tight">
-                    Agent Chat
-                  </span>
                 </motion.button>
               </div>
 
               <div className="flex items-center gap-4">
                 <div className="flex items-center">
-                  <OpenGitHubRepo />
+                  <UserProfile />
                 </div>
                 <TooltipIconButton
                   size="lg"
@@ -436,10 +410,7 @@ export function Thread() {
                 <div className="sticky bottom-0 flex flex-col items-center gap-8 bg-white">
                   {!chatStarted && (
                     <div className="flex items-center gap-3">
-                      <LangGraphLogoSVG className="h-8 flex-shrink-0" />
-                      <h1 className="text-2xl font-semibold tracking-tight">
-                        Agent Chat
-                      </h1>
+                      <CelHiveLogoSVG className="h-8 flex-shrink-0" />
                     </div>
                   )}
 

@@ -17,13 +17,15 @@ import {
 import { useQueryState } from "nuqs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { LangGraphLogoSVG } from "@/components/icons/langgraph";
+import { CelHiveLogoSVG } from "@/components/icons/celhive";
 import { Label } from "@/components/ui/label";
 import { ArrowRight } from "lucide-react";
 import { PasswordInput } from "@/components/ui/password-input";
 import { getApiKey } from "@/lib/api-key";
 import { useThreads } from "./Thread";
 import { toast } from "sonner";
+import { useAuth } from "./Auth";
+import { LoginButton } from "@/components/auth/LoginButton";
 
 export type StateType = { messages: Message[]; ui?: UIMessage[] };
 
@@ -49,14 +51,21 @@ async function sleep(ms = 4000) {
 async function checkGraphStatus(
   apiUrl: string,
   apiKey: string | null,
+  token?: string | null,
 ): Promise<boolean> {
   try {
+    const headers: Record<string, string> = {};
+    
+    if (apiKey) {
+      headers["X-Api-Key"] = apiKey;
+    }
+    
+    if (token) {
+      headers["Authorization"] = `Bearer ${token}`;
+    }
+
     const res = await fetch(`${apiUrl}/info`, {
-      ...(apiKey && {
-        headers: {
-          "X-Api-Key": apiKey,
-        },
-      }),
+      headers,
     });
 
     return res.ok;
@@ -71,20 +80,29 @@ const StreamSession = ({
   apiKey,
   apiUrl,
   assistantId,
+  token,
 }: {
   children: ReactNode;
   apiKey: string | null;
   apiUrl: string;
   assistantId: string;
+  token: string | null;
 }) => {
   const [threadId, setThreadId] = useQueryState("threadId");
   const { getThreads, setThreads } = useThreads();
+  
   const streamValue = useTypedStream({
     apiUrl,
     apiKey: apiKey ?? undefined,
     assistantId,
     threadId: threadId ?? null,
     fetchStateHistory: true,
+    defaultHeaders: {
+      ...(token && { 
+        Authorization: `Bearer ${token}`,
+        'X-Debug-Token': token.substring(0, 10) + '...' // 调试用
+      }),
+    },
     onCustomEvent: (event, options) => {
       if (isUIMessage(event) || isRemoveUIMessage(event)) {
         options.mutate((prev) => {
@@ -102,7 +120,7 @@ const StreamSession = ({
   });
 
   useEffect(() => {
-    checkGraphStatus(apiUrl, apiKey).then((ok) => {
+    checkGraphStatus(apiUrl, apiKey, token).then((ok) => {
       if (!ok) {
         toast.error("Failed to connect to LangGraph server", {
           description: () => (
@@ -117,7 +135,7 @@ const StreamSession = ({
         });
       }
     });
-  }, [apiKey, apiUrl]);
+  }, [apiKey, apiUrl, token]);
 
   return (
     <StreamContext.Provider value={streamValue}>
@@ -126,13 +144,12 @@ const StreamSession = ({
   );
 };
 
-// Default values for the form
-const DEFAULT_API_URL = "http://localhost:2024";
-const DEFAULT_ASSISTANT_ID = "agent";
 
 export const StreamProvider: React.FC<{ children: ReactNode }> = ({
   children,
 }) => {
+  const { isAuthenticated, token, isLoading: authLoading } = useAuth();
+  
   // Get environment variables
   const envApiUrl: string | undefined = process.env.NEXT_PUBLIC_API_URL;
   const envAssistantId: string | undefined =
@@ -161,6 +178,42 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
   const finalApiUrl = apiUrl || envApiUrl;
   const finalAssistantId = assistantId || envAssistantId;
 
+  // Show loading state while auth is loading
+  if (authLoading) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center p-4">
+        <div className="animate-in fade-in-0 zoom-in-95 bg-background flex max-w-3xl flex-col rounded-lg border shadow-lg">
+          <div className="mt-14 flex flex-col gap-2 border-b p-6">
+            <div className="flex flex-col items-start gap-2">
+              <CelHiveLogoSVG className="h-7" />
+            </div>
+            <p className="text-muted-foreground">
+              正在加载...
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="flex min-h-screen w-full items-center justify-center p-4">
+        <div className="animate-in fade-in-0 zoom-in-95 bg-background flex max-w-3xl flex-col rounded-lg border shadow-lg">
+          <div className="mt-14 flex flex-col gap-2 border-b p-6">
+            <div className="flex flex-col items-start gap-2">
+              <CelHiveLogoSVG className="h-7" />
+            </div>
+          </div>
+          <div className="p-6">
+            <LoginButton />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // Show the form if we: don't have an API URL, or don't have an assistant ID
   if (!finalApiUrl || !finalAssistantId) {
     return (
@@ -168,9 +221,9 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
         <div className="animate-in fade-in-0 zoom-in-95 bg-background flex max-w-3xl flex-col rounded-lg border shadow-lg">
           <div className="mt-14 flex flex-col gap-2 border-b p-6">
             <div className="flex flex-col items-start gap-2">
-              <LangGraphLogoSVG className="h-7" />
+              <CelHiveLogoSVG className="h-7" />
               <h1 className="text-xl font-semibold tracking-tight">
-                Agent Chat
+
               </h1>
             </div>
             <p className="text-muted-foreground">
@@ -208,7 +261,7 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
                 id="apiUrl"
                 name="apiUrl"
                 className="bg-background"
-                defaultValue={apiUrl || DEFAULT_API_URL}
+                defaultValue={apiUrl}
                 required
               />
             </div>
@@ -226,7 +279,7 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
                 id="assistantId"
                 name="assistantId"
                 className="bg-background"
-                defaultValue={assistantId || DEFAULT_ASSISTANT_ID}
+                defaultValue={assistantId}
                 required
               />
             </div>
@@ -268,6 +321,7 @@ export const StreamProvider: React.FC<{ children: ReactNode }> = ({
       apiKey={apiKey}
       apiUrl={apiUrl}
       assistantId={assistantId}
+      token={token}
     >
       {children}
     </StreamSession>

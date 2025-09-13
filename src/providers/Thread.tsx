@@ -12,6 +12,7 @@ import {
   SetStateAction,
 } from "react";
 import { createClient } from "./client";
+import { useAuth } from "./Auth";
 
 interface ThreadContextType {
   getThreads: () => Promise<Thread[]>;
@@ -34,14 +35,20 @@ function getThreadSearchMetadata(
 }
 
 export function ThreadProvider({ children }: { children: ReactNode }) {
-  const [apiUrl] = useQueryState("apiUrl");
-  const [assistantId] = useQueryState("assistantId");
+    // Get environment variables
+    const apiUrl: string | undefined = process.env.NEXT_PUBLIC_API_URL;
+    const assistantId: string | undefined =
+      process.env.NEXT_PUBLIC_ASSISTANT_ID;
+  
   const [threads, setThreads] = useState<Thread[]>([]);
   const [threadsLoading, setThreadsLoading] = useState(false);
+  const { token } = useAuth();
 
   const getThreads = useCallback(async (): Promise<Thread[]> => {
-    if (!apiUrl || !assistantId) return [];
-    const client = createClient(apiUrl, getApiKey() ?? undefined);
+    if (!apiUrl || !assistantId) {
+      return [];
+    }
+    const client = createClient(apiUrl, getApiKey() ?? undefined, token ?? undefined);
 
     const threads = await client.threads.search({
       metadata: {
@@ -51,7 +58,7 @@ export function ThreadProvider({ children }: { children: ReactNode }) {
     });
 
     return threads;
-  }, [apiUrl, assistantId]);
+  }, [apiUrl, assistantId, token]);
 
   const value = {
     getThreads,

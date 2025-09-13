@@ -13,6 +13,7 @@ import { toast } from "sonner";
 import { HumanInterrupt, HumanResponse } from "@langchain/langgraph/prebuilt";
 import { END } from "@langchain/langgraph/web";
 import { useStreamContext } from "@/providers/Stream";
+import { withDefaultAgentsConfig } from "@/lib/default-agents-config";
 
 interface UseInterruptedActionsInput {
   interrupt: HumanInterrupt;
@@ -84,11 +85,11 @@ export default function useInterruptedActions({
     try {
       thread.submit(
         {},
-        {
+        withDefaultAgentsConfig({
           command: {
             resume: response,
           },
-        },
+        }),
       );
       return true;
     } catch (e: any) {
@@ -255,11 +256,11 @@ export default function useInterruptedActions({
     try {
       thread.submit(
         {},
-        {
+        withDefaultAgentsConfig({
           command: {
             goto: END,
           },
-        },
+        }),
       );
 
       toast("Success", {
