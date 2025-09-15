@@ -14,6 +14,7 @@ import { ThreadView } from "../agent-inbox";
 import { useQueryState, parseAsBoolean } from "nuqs";
 import { GenericInterruptView } from "./generic-interrupt";
 import { useArtifact } from "../artifact";
+// import celhiveUiComponents from "@/components/celhive-ui-components/src/app/ui/index";
 
 function CustomComponent({
   message,
@@ -24,6 +25,7 @@ function CustomComponent({
 }) {
   const artifact = useArtifact();
   const { values } = useStreamContext();
+
   const customComponents = values.ui?.filter(
     (ui) => ui.metadata?.message_id === message.id,
   );
@@ -37,6 +39,8 @@ function CustomComponent({
           stream={thread}
           message={customComponent}
           meta={{ ui: customComponent, artifact }}
+          namespace="agents-ui"
+          fallback={<div>Loading...</div>}
         />
       ))}
     </Fragment>
