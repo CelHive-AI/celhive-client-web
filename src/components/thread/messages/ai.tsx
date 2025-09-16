@@ -39,7 +39,6 @@ function CustomComponent({
           stream={thread}
           message={customComponent}
           meta={{ ui: customComponent, artifact }}
-          namespace="agents-ui"
           fallback={<div>Loading...</div>}
         />
       ))}
@@ -145,7 +144,7 @@ export function AssistantMessage({
   }
 
   return (
-    <div className="group mr-auto flex items-start gap-2">
+    <div className="group items-start gap-2">
       <div className="flex flex-col gap-2">
         {isToolResult ? (
           <>
